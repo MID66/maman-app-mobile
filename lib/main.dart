@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'services/firebase_service.dart';
 import 'pages/splash_page.dart';
 import 'pages/login_page.dart';
 import 'pages/otp_page.dart';
@@ -10,7 +12,14 @@ import 'pages/reports_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
   await initializeDateFormatting('ar', null);
+  
+  // Initialize Firebase
+  await FirebaseService.initialize();
+  
   runApp(const MyApp());
 }
 
