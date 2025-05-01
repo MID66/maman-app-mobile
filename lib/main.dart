@@ -4,7 +4,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/firebase_service.dart';
 import 'pages/splash_page.dart';
 import 'pages/login_page.dart';
-import 'pages/otp_page.dart';
 import 'pages/home_page.dart';
 import 'pages/profile_page.dart';
 import 'pages/settings_page.dart';
@@ -18,7 +17,7 @@ void main() async {
   await initializeDateFormatting('ar', null);
   
   // Initialize Firebase
-  await FirebaseService.initialize();
+  FirebaseService.initialize();
   
   runApp(const MyApp());
 }
@@ -60,7 +59,6 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const SplashPage(),
         '/login': (context) => const LoginPage(),
-        '/otp': (context) => OTPPage(phoneNumber: '0557461501'),
         '/reports': (context) => const ReportsPage(isInMainLayout: true),
         '/home': (context) => const HomePage(isInMainLayout: true),
         '/profile':

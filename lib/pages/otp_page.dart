@@ -2,10 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'login_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class OTPPage extends StatefulWidget {
   final String phoneNumber;
-  const OTPPage({super.key, required this.phoneNumber});
+  final String verificationId; // new parameter
+  const OTPPage({super.key, required this.phoneNumber, required this.verificationId});
 
   @override
   _OTPPageState createState() => _OTPPageState();
@@ -19,7 +23,59 @@ class _OTPPageState extends State<OTPPage> {
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   int _currentTime = 60;
   Timer? _timer;
-
+  String? _profileData; // Added to store the profile data
+  bool _isLoading = false;
+  
+  void _submitOTP() async {
+    String otp = _controllers.map((c) => c.text).join();
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      PhoneAuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: widget.verificationId,
+        smsCode: otp,
+      );
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final token = await user.getIdToken();
+        final baseUrl = dotenv.env['API_URL_DEV'] ?? "";
+        final profileUrl = '$baseUrl/users/profile';
+        final response = await http.get(
+          Uri.parse(profileUrl),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+        if (response.statusCode == 200) {
+          setState(() {
+            _profileData = response.body;
+          });
+        } else {
+          debugPrint("Failed to fetch profile: ${response.statusCode}");
+        }
+      }
+      
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => HomePage(
+            isInMainLayout: true,
+            profileData: _profileData, // pass the API profile data
+          ),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
+      );
+    } catch (e) {
+      debugPrint("Sign in failed: $e");
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+  
   @override
   void initState() {
     super.initState();
@@ -71,134 +127,123 @@ class _OTPPageState extends State<OTPPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white, // الخلفية بيضاء
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              const SizedBox(height: 80),
-              Image.asset(
-                'assets/logo_login_otp.png',
-                width: 100,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 30),
-              const Text(
-                'ادخل رمز التحقق المرسل اليك',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'تم ارسال رمز التحقق الى رقم الجوال ${widget.phoneNumber}',
-                style: const TextStyle(fontSize: 14, color: Colors.black54),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(6, (index) {
-                  return SizedBox(
-                    width: 45,
-                    child: TextField(
-                      controller: _controllers[index],
-                      focusNode: _focusNodes[index],
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      maxLength: 1,
-                      decoration: InputDecoration(
-                        counterText: '',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 80),
+                Image.asset(
+                  'assets/logo_login_otp.png',
+                  width: 100,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 30),
+                const Text(
+                  'ادخل رمز التحقق المرسل اليك',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'تم ارسال رمز التحقق الى رقم الجوال ${widget.phoneNumber}',
+                  style: const TextStyle(fontSize: 14, color: Colors.black54),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(6, (index) {
+                    return SizedBox(
+                      width: 45,
+                      child: TextField(
+                        controller: _controllers[index],
+                        focusNode: _focusNodes[index],
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        maxLength: 1,
+                        onSubmitted: index == 5 ? (_) => _submitOTP() : null,
+                        decoration: InputDecoration(
+                          counterText: '',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  _currentTime > 0
-                      ? 'إرسال رمز التحقق خلال $_timerText'
-                      : 'تم اعادة ارسال رمز التحقق',
-                  style: const TextStyle(fontSize: 14, color: Colors.black54),
+                    );
+                  }),
                 ),
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                onPressed: () {
-                  String otp = _controllers.map((c) => c.text).join();
-                  debugPrint("رمز التحقق: $otp");
-                  // تأكد من تمرير isInMainLayout: true هنا
-                  Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder:
-                          (context, animation, secondaryAnimation) =>
-                              const HomePage(isInMainLayout: true),
-                      transitionDuration: Duration.zero,
-                      reverseTransitionDuration: Duration.zero,
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromRGBO(184, 219, 217, 1.0),
-                  minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    _currentTime > 0
+                        ? 'إرسال رمز التحقق خلال $_timerText'
+                        : 'تم اعادة ارسال رمز التحقق',
+                    style: const TextStyle(fontSize: 14, color: Colors.black54),
                   ),
                 ),
-                child: const Text(
-                  'تأكيد',
-                  style: TextStyle(fontSize: 18, color: Colors.black),
+                const SizedBox(height: 40),
+                ElevatedButton(
+                  onPressed: _submitOTP,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromRGBO(184, 219, 217, 1.0),
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text('تأكيد', style: TextStyle(fontSize: 18, color: Colors.black)),
                 ),
-              ),
-              const SizedBox(height: 15),
-              ElevatedButton(
-                onPressed: () {
-                  _startTimer();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color.fromRGBO(16, 37, 66, 1.0),
-                  minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                const SizedBox(height: 15),
+                ElevatedButton(
+                  onPressed: () {
+                    _startTimer();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromRGBO(16, 37, 66, 1.0),
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'إعادة ارسال',
+                    style: TextStyle(fontSize: 18, color: Colors.white),
                   ),
                 ),
-                child: const Text(
-                  'إعادة ارسال',
-                  style: TextStyle(fontSize: 18, color: Colors.white),
+                const SizedBox(height: 20),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      PageRouteBuilder(
+                        pageBuilder: (context, animation, secondaryAnimation) =>
+                            const LoginPage(),
+                        transitionDuration: Duration.zero,
+                        reverseTransitionDuration: Duration.zero,
+                      ),
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.arrow_back_ios,
+                    size: 18,
+                    color: Colors.black,
+                  ),
+                  label: const Text(
+                    'تغيير رقم الجوال',
+                    style: TextStyle(fontSize: 16, color: Colors.black),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              TextButton.icon(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder:
-                          (context, animation, secondaryAnimation) =>
-                              const LoginPage(),
-                      transitionDuration: Duration.zero,
-                      reverseTransitionDuration: Duration.zero,
-                    ),
-                  );
-                },
-                icon: const Icon(
-                  Icons.arrow_back_ios,
-                  size: 18,
-                  color: Colors.black,
-                ),
-                label: const Text(
-                  'تغيير رقم الجوال',
-                  style: TextStyle(fontSize: 16, color: Colors.black),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          if (_isLoading)
+            Container(
+              color: Colors.black38,
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+        ],
       ),
     );
   }

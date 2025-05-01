@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:convert';
 import '../widgets/custom_appbar.dart';
 import '../widgets/custom_bottom_nav.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class HomePage extends StatefulWidget {
   final bool isInMainLayout;
-  const HomePage({super.key, this.isInMainLayout = false});
-
+  final String? profileData; // new parameter
+  static String? cachedProfileData; // new static variable to cache profile data
+  const HomePage({super.key, this.isInMainLayout = false, this.profileData});
+  
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -23,15 +29,18 @@ class _HomePageState extends State<HomePage>
   Timer? timer;
   String timeRemaining = 'جاري حساب الوقت...';
 
-  String selectedStudent = 'سارة';
-
-  // قائمة الأطفال (٤ أبناء)
-  final List<Map<String, String>> children = [
+  // Change children from final to a mutable variable.
+  List<Map<String, String>> children = [
     {'name': 'سارة', 'image': 'assets/kid1.png'},
     {'name': 'محمد', 'image': 'assets/kid2.png'},
     {'name': 'نورة', 'image': 'assets/kid3.png'},
     {'name': 'عبدالله', 'image': 'assets/kid4.png'},
   ];
+
+  String selectedStudent = 'سارة';
+  bool _showFullName = false;
+  String selectedStudentFull = '';
+  String selectedSchool = 'مدرسة فيصل بن تركي الابتدائية'; // new dynamic school variable
 
   final List<Map<String, String>> delegates = [
     {'name': 'عمر', 'image': 'assets/icons/profile_icon.png'},
@@ -40,6 +49,57 @@ class _HomePageState extends State<HomePage>
   @override
   void initState() {
     super.initState();
+    String? data = widget.profileData ?? HomePage.cachedProfileData;
+    if (data != null) {
+      HomePage.cachedProfileData = data;
+      try {
+        final userMap = jsonDecode(data);
+        if (userMap['AuthorizedPickupPeople'] != null &&
+            userMap['AuthorizedPickupPeople'] is List) {
+          List<Map<String, dynamic>> authorizedChildren = [];
+          for (var auth in userMap['AuthorizedPickupPeople']) {
+            var student = auth['Student'];
+            if (student != null) {
+              String firstName = student['first_name'] ?? '';
+              String lastName = student['last_name'] ?? '';
+              String school = "";
+              if (student.containsKey('School') && student['School'] != null) {
+                school = student['School']['school_name'] ?? '';
+              }
+              authorizedChildren.add({
+                "first_name": firstName,
+                "last_name": lastName,
+                "name": firstName,
+                "full": "$firstName $lastName",
+                "school": school,
+                "image": (student['gender'] ?? '') == "Female"
+                    ? 'assets/kid1.png'
+                    : 'assets/kid2.png',
+                // UPDATED: use student's "student_id" as integer
+                "student_id": student["student_id"] ?? 0,
+              });
+            }
+          }
+          if (authorizedChildren.isNotEmpty) {
+            setState(() {
+              // Cast list to List<Map<String, String>> if needed for UI but keep student_id as int
+              children = authorizedChildren.map((child) {
+                // Convert student_id to string for display if needed, but keep original int in separate key
+                child["student_id"] = child["student_id"];
+                return child.map((key, value) => MapEntry(key, value.toString()));
+              }).toList();
+              selectedStudent = children.first["name"]!;
+              selectedStudentFull = children.first["full"]!;
+              selectedSchool = children.first["school"]!.isNotEmpty
+                  ? children.first["school"]!
+                  : 'مدرسة فيصل بن تركي الابتدائية';
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint("Error parsing profileData: $e");
+      }
+    }
     _initializeDismissalTime();
     _updateTimeRemaining();
     timer = Timer.periodic(
@@ -51,7 +111,7 @@ class _HomePageState extends State<HomePage>
   void _initializeDismissalTime() {
     final now = DateTime.now();
     // تعيين وقت الانصراف لليوم الحالي عند الساعة 12:00
-    dismissalTime = DateTime(now.year, now.month, now.day, 12, 0, 0);
+    dismissalTime = DateTime(now.year, now.month, now.day, 23, 0, 0);
   }
 
   void _updateTimeRemaining() {
@@ -81,8 +141,17 @@ class _HomePageState extends State<HomePage>
   }
 
   void updateStudentName(String name) {
+    // Find child record by first name (or adjust key if needed)
+    final child = children.firstWhere(
+      (child) => child['name'] == name,
+      orElse: () => {'name': name, 'full': name, 'school': ''},
+    );
     setState(() {
-      selectedStudent = name;
+      selectedStudent = child['name']!;
+      selectedStudentFull = child['full']!;
+      selectedSchool = (child['school'] != null && child['school']!.isNotEmpty)
+          ? child['school']!
+          : 'مدرسة فيصل بن تركي الابتدائية';
     });
   }
 
@@ -207,19 +276,20 @@ class _HomePageState extends State<HomePage>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          // Always show full name
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '$selectedStudent عبدالرحمن عبدالله',
+                selectedStudentFull,
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const Text(
-                'مدرسة فيصل بن تركي الابتدائية',
-                style: TextStyle(fontSize: 14, color: Colors.black54),
+              Text(
+                selectedSchool,
+                style: const TextStyle(fontSize: 14, color: Colors.black54),
               ),
             ],
           ),
@@ -250,15 +320,9 @@ class _HomePageState extends State<HomePage>
       dismissalTime.add(const Duration(hours: 1)),
     );
     final String middleText =
-        isTimeDone
-            ? 'حان وقت خروج $selectedStudent'
-            : 'متبقي على نداء $selectedStudent';
-    final Color callingButtonColor =
-        !isTimeDone
-            ? backgroundColor
-            : const Color.fromRGBO(184, 219, 218, 1.0);
-    final Color confirmButtonColor =
-        !isTimeDone ? backgroundColor : const Color.fromRGBO(16, 37, 66, 1.0);
+        isTimeDone ? 'حان وقت خروج $selectedStudent' : 'متبقي على نداء $selectedStudent';
+    final Color callingButtonColor =  const Color.fromRGBO(16, 37, 66, 1.0);
+    final Color confirmButtonColor =  const Color.fromRGBO(16, 37, 66, 1.0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -381,13 +445,8 @@ class _HomePageState extends State<HomePage>
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  onPressed:
-                                      isTimeDone
-                                          ? () => _showCallingDialog(
-                                            context,
-                                            selectedStudent,
-                                          )
-                                          : null,
+                                  // For dev purpose, always enable and call the new dismiss API
+                                  onPressed: () => _dismissStudent(),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: callingButtonColor,
                                     elevation: 0,
@@ -401,15 +460,7 @@ class _HomePageState extends State<HomePage>
                                     'نـداء',
                                     style: TextStyle(
                                       fontSize: 16,
-                                      color:
-                                          isTimeDone
-                                              ? const Color.fromRGBO(
-                                                16,
-                                                37,
-                                                66,
-                                                1.0,
-                                              )
-                                              : Colors.black38,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
@@ -438,15 +489,9 @@ class _HomePageState extends State<HomePage>
                                     'تأكيد استلام $selectedStudent',
                                     style: TextStyle(
                                       fontSize: 16,
-                                      color:
-                                          isTimeDone
-                                              ? const Color.fromRGBO(
-                                                184,
-                                                219,
-                                                217,
-                                                1.0,
-                                              )
-                                              : Colors.black38,
+                                      color: isTimeDone
+                                          ? const Color.fromRGBO(184, 219, 217, 1.0)
+                                          : Colors.black38,
                                     ),
                                   ),
                                 ),
@@ -600,6 +645,43 @@ class _HomePageState extends State<HomePage>
         ],
       ),
     );
+  }
+
+  // UPDATED: _dismissStudent now uses student_id as integer
+  Future<void> _dismissStudent() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final token = await user.getIdToken();
+      final baseUrl = dotenv.env['API_URL_DEV'] ?? "";
+      final dismissUrl = '$baseUrl/dismiss-student';
+      // Retrieve student_id as integer from the selected child.
+      final student = children.firstWhere(
+        (child) => child['name'] == selectedStudent,
+        orElse: () => {},
+      );
+      // Convert the stored string back to int
+      final studentId = int.tryParse(student['student_id'] ?? '');
+      if (studentId == null) {
+        debugPrint("Invalid student_id");
+        return;
+      }
+      final response = await http.post(
+        Uri.parse(dismissUrl),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json'
+        },
+        body: jsonEncode({'student_id': studentId}),
+      );
+      if (response.statusCode == 200) {
+        _showConfirmDialog(context, selectedStudent);
+      } else {
+        debugPrint('Dismiss failed with status: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint("Dismiss error: $e");
+    }
   }
 
   @override

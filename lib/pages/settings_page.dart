@@ -5,6 +5,7 @@ import 'children_page.dart';
 import 'add_delegate_page.dart';
 import 'support_page.dart';
 import 'privacy_policy_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SettingsPage extends StatefulWidget {
   final String guardianName;
@@ -141,8 +142,9 @@ class _SettingsPageState extends State<SettingsPage> {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  // تنفيذ عملية تسجيل الخروج
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                  Navigator.pushReplacementNamed(context, '/login');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,

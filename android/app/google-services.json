@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "314915813091",
+    "project_id": "student-exit",
+    "storage_bucket": "student-exit.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:314915813091:android:1ad318f1c119385e4a77d6",
+        "android_client_info": {
+          "package_name": "com.example.studentexitsystem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNflSxL9mkbaUHIpD4ed8q8s70K7aLjLI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -262,15 +262,10 @@ class _ReportsPageState extends State<ReportsPage> {
     DateTime pickupTime = DateTime.parse(report['pickup_time']);
     String dayName = DateFormat('EEEE', 'ar').format(pickupTime);
     String timeFormatted = DateFormat('hh:mm a', 'ar').format(pickupTime);
-    String childFirstName = report['Student']?['first_name'] ?? '';
+    String firstName = report['Student']?['first_name'] ?? '';
     String gender = (report['Student']?['gender'] ?? '').toLowerCase();
     String avatar = gender == "female" ? 'assets/kid1.png' : 'assets/kid2.png';
-    String appUserFirstName = "لوس";
-    String pickupFirstName = report['pickupPerson']?['first_name'] ?? '';
-    String pickupMessage = pickupFirstName == appUserFirstName
-        ? "خرج $childFirstName معك"
-        : "خرج $childFirstName مع ($pickupFirstName)";
-        
+
     return Card(
       color: Colors.white,
       elevation: 0,
@@ -280,47 +275,38 @@ class _ReportsPageState extends State<ReportsPage> {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '$dayName, $timeFormatted',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color.fromRGBO(16, 37, 66, 1.0),
-                        ),
-                        textAlign: TextAlign.left,
-                      ),
-                      Text(
-                        childFirstName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Color.fromRGBO(16, 37, 66, 1.0),
-                        ),
-                        textAlign: TextAlign.right,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    pickupMessage,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color.fromRGBO(16, 37, 66, 1.0),
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
             CircleAvatar(
               backgroundImage: AssetImage(avatar),
               radius: 25,
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  firstName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color.fromRGBO(16, 37, 66, 1.0),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  dayName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color.fromRGBO(16, 37, 66, 1.0),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  timeFormatted,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color.fromRGBO(16, 37, 66, 1.0),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
