@@ -37,10 +37,11 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => OTPPage(
-              phoneNumber: fullPhone,
-              verificationId: verificationId,
-            ),
+            builder:
+                (context) => OTPPage(
+                  phoneNumber: fullPhone,
+                  verificationId: verificationId,
+                ),
           ),
         );
       },
@@ -106,7 +107,9 @@ class _LoginPageState extends State<LoginPage> {
                                           value: value,
                                           child: Text(
                                             value,
-                                            style: const TextStyle(fontSize: 16),
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                            ),
                                           ),
                                         );
                                       }).toList(),
@@ -165,7 +168,10 @@ class _LoginPageState extends State<LoginPage> {
                     child: Text(
                       'بالضغط على "استمرار"، فإنك تؤكد موافقتك على جميع الشروط والتزامك بما ورد فيها.',
                       textAlign: TextAlign.right,
-                      style: const TextStyle(fontSize: 14, color: Colors.black54),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 30),

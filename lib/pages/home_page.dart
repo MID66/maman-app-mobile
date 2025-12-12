@@ -6,13 +6,16 @@ import '../widgets/custom_bottom_nav.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/notification_service.dart';
+import 'add_delegate_page.dart';
 
 class HomePage extends StatefulWidget {
   final bool isInMainLayout;
   final String? profileData; // new parameter
   static String? cachedProfileData; // new static variable to cache profile data
   const HomePage({super.key, this.isInMainLayout = false, this.profileData});
-  
+
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -38,9 +41,13 @@ class _HomePageState extends State<HomePage>
   ];
 
   String selectedStudent = 'سارة';
-  bool _showFullName = false;
+  final bool _showFullName = false;
   String selectedStudentFull = '';
-  String selectedSchool = 'مدرسة فيصل بن تركي الابتدائية'; // new dynamic school variable
+  String selectedSchool =
+      'مدرسة فيصل بن تركي الابتدائية'; // new dynamic school variable
+  bool hasCalled = false; // New state variable to track if call has been made
+  bool _isDismissalTime = false;
+  bool isBellOn = true; // New state variable for bell toggle
 
   final List<Map<String, String>> delegates = [
     {'name': 'عمر', 'image': 'assets/icons/profile_icon.png'},
@@ -49,6 +56,8 @@ class _HomePageState extends State<HomePage>
   @override
   void initState() {
     super.initState();
+    _initializeNotifications();
+    _loadBellState();
     String? data = widget.profileData ?? HomePage.cachedProfileData;
     if (data != null) {
       HomePage.cachedProfileData = data;
@@ -72,9 +81,10 @@ class _HomePageState extends State<HomePage>
                 "name": firstName,
                 "full": "$firstName $lastName",
                 "school": school,
-                "image": (student['gender'] ?? '') == "Female"
-                    ? 'assets/kid1.png'
-                    : 'assets/kid2.png',
+                "image":
+                    (student['gender'] ?? '') == "Female"
+                        ? 'assets/kid1.png'
+                        : 'assets/kid2.png',
                 // UPDATED: use student's "student_id" as integer
                 "student_id": student["student_id"] ?? 0,
               });
@@ -83,16 +93,20 @@ class _HomePageState extends State<HomePage>
           if (authorizedChildren.isNotEmpty) {
             setState(() {
               // Cast list to List<Map<String, String>> if needed for UI but keep student_id as int
-              children = authorizedChildren.map((child) {
-                // Convert student_id to string for display if needed, but keep original int in separate key
-                child["student_id"] = child["student_id"];
-                return child.map((key, value) => MapEntry(key, value.toString()));
-              }).toList();
+              children =
+                  authorizedChildren.map((child) {
+                    // Convert student_id to string for display if needed, but keep original int in separate key
+                    child["student_id"] = child["student_id"];
+                    return child.map(
+                      (key, value) => MapEntry(key, value.toString()),
+                    );
+                  }).toList();
               selectedStudent = children.first["name"]!;
               selectedStudentFull = children.first["full"]!;
-              selectedSchool = children.first["school"]!.isNotEmpty
-                  ? children.first["school"]!
-                  : 'مدرسة فيصل بن تركي الابتدائية';
+              selectedSchool =
+                  children.first["school"]!.isNotEmpty
+                      ? children.first["school"]!
+                      : 'مدرسة فيصل بن تركي الابتدائية';
             });
           }
         }
@@ -108,10 +122,49 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  Future<void> _initializeNotifications() async {
+    await NotificationService().init();
+    await NotificationService().requestPermissions();
+  }
+
+  Future<void> _loadBellState() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isBellOn = prefs.getBool('isBellOn') ?? true;
+    });
+    _scheduleOrCancelNotification();
+  }
+
+  Future<void> _toggleBell() async {
+    setState(() {
+      isBellOn = !isBellOn;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isBellOn', isBellOn);
+    _scheduleOrCancelNotification();
+  }
+
+  void _scheduleOrCancelNotification() {
+    if (isBellOn) {
+      final now = DateTime.now();
+      if (dismissalTime.isAfter(now)) {
+        NotificationService().scheduleNotification(
+          id: 1,
+          title: 'تنبيه الانصراف',
+          body: 'حان وقت الانصراف',
+          scheduledTime: dismissalTime,
+        );
+      }
+    } else {
+      NotificationService().cancelNotification(1);
+    }
+  }
+
   void _initializeDismissalTime() {
     final now = DateTime.now();
     // تعيين وقت الانصراف لليوم الحالي عند الساعة 12:00
     dismissalTime = DateTime(now.year, now.month, now.day, 23, 0, 0);
+    _scheduleOrCancelNotification();
   }
 
   void _updateTimeRemaining() {
@@ -124,9 +177,13 @@ class _HomePageState extends State<HomePage>
     if (mounted) {
       setState(() {
         if (diff.isNegative) {
-          timeRemaining = 'حان وقت الانصراف ';
+          timeRemaining = 'حان وقت الانصراف';
+          _isDismissalTime = true;
         } else {
           timeRemaining = _formatDuration(diff);
+          _isDismissalTime = false;
+          // Ensure hasCalled is false if it's not dismissal time yet
+          hasCalled = false;
         }
       });
     }
@@ -149,48 +206,21 @@ class _HomePageState extends State<HomePage>
     setState(() {
       selectedStudent = child['name']!;
       selectedStudentFull = child['full']!;
-      selectedSchool = (child['school'] != null && child['school']!.isNotEmpty)
-          ? child['school']!
-          : 'مدرسة فيصل بن تركي الابتدائية';
+      selectedSchool =
+          (child['school'] != null && child['school']!.isNotEmpty)
+              ? child['school']!
+              : 'مدرسة فيصل بن تركي الابتدائية';
+      hasCalled = false; // Reset call status when student changes
     });
   }
 
-  void _showCallingDialog(BuildContext context, String studentName) {
-    showDialog(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'يتم الآن نداء $studentName',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                CircleAvatar(
-                  radius: 40,
-                  backgroundImage: AssetImage('assets/kid4.png'),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('رجوع'),
-                ),
-              ],
-            ),
-          ),
-    );
-  }
-
   void _showConfirmDialog(BuildContext context, String studentName) {
+    final child = children.firstWhere(
+      (child) => child['name'] == studentName,
+      orElse: () => {'image': 'assets/kid1.png'},
+    );
+    final imagePath = child['image'] ?? 'assets/kid1.png';
+
     showDialog(
       context: context,
       builder:
@@ -212,7 +242,48 @@ class _HomePageState extends State<HomePage>
                 const SizedBox(height: 16),
                 CircleAvatar(
                   radius: 40,
-                  backgroundImage: AssetImage('assets/kid4.png'),
+                  backgroundImage: AssetImage(imagePath),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('رجوع'),
+                ),
+              ],
+            ),
+          ),
+    );
+  }
+
+  void _showCallDialog(BuildContext context, String studentName) {
+    final child = children.firstWhere(
+      (child) => child['name'] == studentName,
+      orElse: () => {'image': 'assets/kid1.png'},
+    );
+    final imagePath = child['image'] ?? 'assets/kid1.png';
+
+    showDialog(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'يتم الآن نـداء $studentName',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                CircleAvatar(
+                  radius: 40,
+                  backgroundImage: AssetImage(imagePath),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
@@ -236,10 +307,15 @@ class _HomePageState extends State<HomePage>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  Image.asset(
-                    'assets/icons/bell_fill.png',
-                    height: 26,
-                    fit: BoxFit.contain,
+                  GestureDetector(
+                    onTap: _toggleBell,
+                    child: Image.asset(
+                      isBellOn
+                          ? 'assets/icons/bell_fill.png'
+                          : 'assets/icons/bell_off.png',
+                      height: 26,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                   const Spacer(),
                   const Padding(
@@ -315,14 +391,16 @@ class _HomePageState extends State<HomePage>
   /// دون تعديل paddingها.
   Widget buildDismissalCard() {
     final now = DateTime.now();
-    final bool isTimeDone = (timeRemaining == 'حان وقت الانصراف');
+    final bool isTimeDone = _isDismissalTime;
     final bool isLate = now.isAfter(
       dismissalTime.add(const Duration(hours: 1)),
     );
     final String middleText =
-        isTimeDone ? 'حان وقت خروج $selectedStudent' : 'متبقي على نداء $selectedStudent';
-    final Color callingButtonColor =  const Color.fromRGBO(16, 37, 66, 1.0);
-    final Color confirmButtonColor =  const Color.fromRGBO(16, 37, 66, 1.0);
+        isTimeDone
+            ? 'حان وقت خروج $selectedStudent'
+            : 'متبقي على نداء $selectedStudent';
+    final Color callingButtonColor = const Color.fromRGBO(16, 37, 66, 1.0);
+    final Color confirmButtonColor = const Color.fromRGBO(16, 37, 66, 1.0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -361,7 +439,9 @@ class _HomePageState extends State<HomePage>
                               const SizedBox(height: 4),
                               // هنا نضيف الخاصية textAlign دون تغيير padding
                               Padding(
-                                padding: const EdgeInsets.only(left: 50),
+                                padding: EdgeInsets.only(
+                                  left: isTimeDone ? 12 : 50,
+                                ),
                                 child: Text(
                                   timeRemaining,
                                   style: const TextStyle(
@@ -411,20 +491,14 @@ class _HomePageState extends State<HomePage>
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              isTimeDone
-                                  ? Transform.translate(
-                                    offset: const Offset(-10, 0),
-                                    child: Text(
-                                      middleText,
-                                      style: const TextStyle(fontSize: 16),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  )
-                                  : Text(
-                                    middleText,
-                                    style: const TextStyle(fontSize: 16),
-                                    textAlign: TextAlign.center,
-                                  ),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 10),
+                                child: Text(
+                                  middleText,
+                                  style: const TextStyle(fontSize: 16),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
                               const SizedBox(height: 4),
                               if (!isTimeDone)
                                 Center(
@@ -445,10 +519,20 @@ class _HomePageState extends State<HomePage>
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  // For dev purpose, always enable and call the new dismiss API
-                                  onPressed: () => _dismissStudent(),
+                                  onPressed:
+                                      isTimeDone
+                                          ? () => _dismissStudent()
+                                          : null,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: callingButtonColor,
+                                    backgroundColor:
+                                        isTimeDone
+                                            ? const Color.fromRGBO(
+                                              184,
+                                              219,
+                                              217,
+                                              1.0,
+                                            )
+                                            : callingButtonColor,
                                     elevation: 0,
                                     shadowColor: Colors.transparent,
                                     shape: RoundedRectangleBorder(
@@ -460,7 +544,15 @@ class _HomePageState extends State<HomePage>
                                     'نـداء',
                                     style: TextStyle(
                                       fontSize: 16,
-                                      color: Colors.white,
+                                      color:
+                                          isTimeDone
+                                              ? const Color.fromRGBO(
+                                                16,
+                                                37,
+                                                66,
+                                                1.0,
+                                              )
+                                              : Colors.black38,
                                     ),
                                   ),
                                 ),
@@ -470,14 +562,22 @@ class _HomePageState extends State<HomePage>
                                 width: double.infinity,
                                 child: ElevatedButton(
                                   onPressed:
-                                      isTimeDone
+                                      hasCalled && isTimeDone
                                           ? () => _showConfirmDialog(
                                             context,
                                             selectedStudent,
                                           )
                                           : null,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: confirmButtonColor,
+                                    backgroundColor:
+                                        hasCalled
+                                            ? const Color.fromRGBO(
+                                              16,
+                                              37,
+                                              66,
+                                              1.0,
+                                            )
+                                            : confirmButtonColor,
                                     elevation: 0,
                                     shadowColor: Colors.transparent,
                                     shape: RoundedRectangleBorder(
@@ -489,9 +589,15 @@ class _HomePageState extends State<HomePage>
                                     'تأكيد استلام $selectedStudent',
                                     style: TextStyle(
                                       fontSize: 16,
-                                      color: isTimeDone
-                                          ? const Color.fromRGBO(184, 219, 217, 1.0)
-                                          : Colors.black38,
+                                      color:
+                                          hasCalled
+                                              ? const Color.fromRGBO(
+                                                184,
+                                                219,
+                                                217,
+                                                1.0,
+                                              )
+                                              : Colors.black38,
                                     ),
                                   ),
                                 ),
@@ -583,31 +689,76 @@ class _HomePageState extends State<HomePage>
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child:
-                delegates.isEmpty
-                    ? const Center(
-                      child: Text(
-                        'لا يوجد مفوضين',
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Color.fromRGBO(184, 219, 217, 1.0),
-                        ),
-                      ),
-                    )
-                    : Wrap(
-                      spacing: 16,
-                      runSpacing: 16,
-                      textDirection: TextDirection.rtl,
-                      children:
-                          delegates
-                              .map(
-                                (d) =>
-                                    _buildDelegateItem(d['name']!, d['image']!),
-                              )
-                              .toList(),
-                    ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              textDirection: TextDirection.rtl,
+              children: [
+                Expanded(
+                  child: Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    textDirection: TextDirection.rtl,
+                    children:
+                        delegates
+                            .map(
+                              (d) =>
+                                  _buildDelegateItem(d['name']!, d['image']!),
+                            )
+                            .toList(),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                _buildAddDelegateItem(),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAddDelegateItem() {
+    return SizedBox(
+      width: 70,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Material(
+            color: const Color.fromRGBO(184, 219, 217, 1.0),
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddDelegatePage(),
+                  ),
+                );
+              },
+              child: SizedBox(
+                width: 70,
+                height: 70,
+                child: Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: Center(
+                    child: Image.asset(
+                      'assets/icons/plus_icon.png',
+                      height: 60,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'إضافة مفوض ',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14),
+          ),
+        ],
       ),
     );
   }
@@ -663,24 +814,41 @@ class _HomePageState extends State<HomePage>
       // Convert the stored string back to int
       final studentId = int.tryParse(student['student_id'] ?? '');
       if (studentId == null) {
-        debugPrint("Invalid student_id");
+        debugPrint("Invalid student_id - proceeding for UI demo");
+        setState(() {
+          hasCalled = true;
+        });
+        if (mounted) _showCallDialog(context, selectedStudent);
         return;
       }
       final response = await http.post(
         Uri.parse(dismissUrl),
         headers: {
           'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: jsonEncode({'student_id': studentId}),
       );
       if (response.statusCode == 200) {
-        _showConfirmDialog(context, selectedStudent);
+        setState(() {
+          hasCalled = true;
+        });
+        if (mounted) _showCallDialog(context, selectedStudent);
       } else {
         debugPrint('Dismiss failed with status: ${response.statusCode}');
+        // For testing purposes, enable the button even if API fails
+        setState(() {
+          hasCalled = true;
+        });
+        if (mounted) _showCallDialog(context, selectedStudent);
       }
     } catch (e) {
       debugPrint("Dismiss error: $e");
+      // For testing purposes, enable the button even if API fails
+      setState(() {
+        hasCalled = true;
+      });
+      if (mounted) _showCallDialog(context, selectedStudent);
     }
   }
 

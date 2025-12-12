@@ -101,32 +101,37 @@ class _CustomAppBarState extends State<CustomAppBar> {
           ),
         ),
         if (widget.showProfile)
-          Positioned(
-            top: 65,
-            right: 16,
-            child: Row(
-              children: [
-                Text(
-                  widget.guardianName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                CircleAvatar(
-                  backgroundColor: Colors.grey[300],
-                  radius: 45,
-                  child: Center(
-                    child: Image.asset(
-                      'assets/icons/profile_icon.png',
-                      height: 60, // يمكنك تعديل هذا الحجم حسب الحاجة
-                      fit: BoxFit.contain,
+          SafeArea(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      widget.guardianName,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 10),
+                    CircleAvatar(
+                      backgroundColor: Colors.grey[300],
+                      radius: 40,
+                      child: Center(
+                        child: Image.asset(
+                          'assets/icons/profile_icon.png',
+                          height: 55,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
       ],

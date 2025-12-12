@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'home_page.dart';
@@ -18,12 +17,12 @@ class _SplashPageState extends State<SplashPage> {
     super.initState();
     _init(); // call async initializer
   }
-  
+
   Future<void> _init() async {
     await FirebaseService.initialize(); // ensure Firebase is initialized
     await _checkLogin();
   }
-  
+
   Future<void> _checkLogin() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -41,14 +40,15 @@ class _SplashPageState extends State<SplashPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => HomePage(isInMainLayout: true, profileData: profileData),
+          builder:
+              (_) => HomePage(isInMainLayout: true, profileData: profileData),
         ),
       );
     } else {
       Navigator.pushReplacementNamed(context, '/login');
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

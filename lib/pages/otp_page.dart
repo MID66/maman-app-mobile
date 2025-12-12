@@ -9,7 +9,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class OTPPage extends StatefulWidget {
   final String phoneNumber;
   final String verificationId; // new parameter
-  const OTPPage({super.key, required this.phoneNumber, required this.verificationId});
+  const OTPPage({
+    super.key,
+    required this.phoneNumber,
+    required this.verificationId,
+  });
 
   @override
   _OTPPageState createState() => _OTPPageState();
@@ -25,7 +29,7 @@ class _OTPPageState extends State<OTPPage> {
   Timer? _timer;
   String? _profileData; // Added to store the profile data
   bool _isLoading = false;
-  
+
   void _submitOTP() async {
     String otp = _controllers.map((c) => c.text).join();
     setState(() {
@@ -37,7 +41,7 @@ class _OTPPageState extends State<OTPPage> {
         smsCode: otp,
       );
       await FirebaseAuth.instance.signInWithCredential(credential);
-      
+
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         final token = await user.getIdToken();
@@ -55,14 +59,15 @@ class _OTPPageState extends State<OTPPage> {
           debugPrint("Failed to fetch profile: ${response.statusCode}");
         }
       }
-      
+
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => HomePage(
-            isInMainLayout: true,
-            profileData: _profileData, // pass the API profile data
-          ),
+          pageBuilder:
+              (context, animation, secondaryAnimation) => HomePage(
+                isInMainLayout: true,
+                profileData: _profileData, // pass the API profile data
+              ),
           transitionDuration: Duration.zero,
           reverseTransitionDuration: Duration.zero,
         ),
@@ -75,7 +80,7 @@ class _OTPPageState extends State<OTPPage> {
       });
     }
   }
-  
+
   @override
   void initState() {
     super.initState();
@@ -92,7 +97,9 @@ class _OTPPageState extends State<OTPPage> {
 
   void _startTimer() {
     _timer?.cancel();
-    _currentTime = 60;
+    setState(() {
+      _currentTime = 60;
+    });
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_currentTime == 0) {
         setState(() {});
@@ -179,7 +186,7 @@ class _OTPPageState extends State<OTPPage> {
                   child: Text(
                     _currentTime > 0
                         ? 'إرسال رمز التحقق خلال $_timerText'
-                        : 'تم اعادة ارسال رمز التحقق',
+                        : 'يمكنك إعادة إرسال رمز التحقق مرة أخرى',
                     style: const TextStyle(fontSize: 14, color: Colors.black54),
                   ),
                 ),
@@ -193,23 +200,35 @@ class _OTPPageState extends State<OTPPage> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: const Text('تأكيد', style: TextStyle(fontSize: 18, color: Colors.black)),
+                  child: const Text(
+                    'تأكيد',
+                    style: TextStyle(fontSize: 18, color: Colors.black),
+                  ),
                 ),
                 const SizedBox(height: 15),
                 ElevatedButton(
-                  onPressed: () {
-                    _startTimer();
-                  },
+                  onPressed:
+                      _currentTime == 0
+                          ? () {
+                            _startTimer();
+                          }
+                          : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromRGBO(16, 37, 66, 1.0),
+                    backgroundColor:
+                        _currentTime == 0
+                            ? const Color.fromRGBO(16, 37, 66, 1.0)
+                            : Colors.grey,
                     minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: const Text(
+                  child: Text(
                     'إعادة ارسال',
-                    style: TextStyle(fontSize: 18, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: _currentTime == 0 ? Colors.white : Colors.black38,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -218,8 +237,9 @@ class _OTPPageState extends State<OTPPage> {
                     Navigator.pushReplacement(
                       context,
                       PageRouteBuilder(
-                        pageBuilder: (context, animation, secondaryAnimation) =>
-                            const LoginPage(),
+                        pageBuilder:
+                            (context, animation, secondaryAnimation) =>
+                                const LoginPage(),
                         transitionDuration: Duration.zero,
                         reverseTransitionDuration: Duration.zero,
                       ),

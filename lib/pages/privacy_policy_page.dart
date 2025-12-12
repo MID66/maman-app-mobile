@@ -57,12 +57,16 @@ class PrivacyPolicyPage extends StatelessWidget {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text(
-                    policyText,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.black87,
-                      height: 1.5,
+                  child: Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Text(
+                      policyText,
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.black87,
+                        height: 1.5,
+                      ),
                     ),
                   ),
                 ),

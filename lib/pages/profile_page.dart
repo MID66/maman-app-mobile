@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'home_page.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/custom_bottom_nav.dart';
 
@@ -17,13 +19,46 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  String firstName = '';
+  String lastName = '';
+  String phone = '';
+  String email = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileData();
+  }
+
+  void _loadProfileData() {
+    String? data = HomePage.cachedProfileData;
+    if (data != null) {
+      try {
+        final userMap = jsonDecode(data);
+        setState(() {
+          firstName = userMap['first_name'] ?? '';
+          lastName = userMap['last_name'] ?? '';
+          phone = userMap['phone_number'] ?? '';
+          email = userMap['email'] ?? '';
+        });
+      } catch (e) {
+        debugPrint("Error parsing profile data in ProfilePage: $e");
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    String displayName =
+        (firstName.isNotEmpty || lastName.isNotEmpty)
+            ? '$firstName $lastName'.trim()
+            : widget.guardianName;
+
     return Scaffold(
       appBar: CustomAppBar(
         children: [],
         showProfile: true,
-        guardianName: widget.guardianName,
+        guardianName: displayName,
         onChildSelected: (name) {},
       ),
       backgroundColor: const Color.fromRGBO(235, 235, 235, 1.0),
@@ -59,9 +94,19 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               child: Column(
                 children: [
-                  buildInfoRow(widget.guardianName, 'الاسم'),
-                  buildInfoRow('055*******', 'رقم الجوال'),
-                  buildInfoRow('ABDUL**@gmail.com', 'الإيميل'),
+                  buildInfoRow(
+                    displayName,
+                    'الاسم',
+                    textAlign: TextAlign.right,
+                  ),
+                  buildInfoRow(
+                    phone.isNotEmpty ? phone : 'غير متوفر',
+                    'رقم الجوال',
+                  ),
+                  buildInfoRow(
+                    email.isNotEmpty ? email : 'غير متوفر',
+                    'الإيميل',
+                  ),
                 ],
               ),
             ),
@@ -90,7 +135,11 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget buildInfoRow(String value, String label) {
+  Widget buildInfoRow(
+    String value,
+    String label, {
+    TextAlign textAlign = TextAlign.left,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Directionality(
@@ -110,7 +159,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 child: Text(
                   value,
-                  textAlign: TextAlign.left,
+                  textAlign: textAlign,
                   style: TextStyle(
                     fontSize: 16,
                     color: const Color.fromRGBO(16, 37, 66, 1.0),

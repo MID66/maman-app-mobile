@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'home_page.dart';
 import '../widgets/custom_appbar.dart';
 import '../widgets/custom_bottom_nav.dart';
 import 'children_page.dart';
@@ -23,6 +25,29 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _isArabic = true;
+  String firstName = '';
+  String lastName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileData();
+  }
+
+  void _loadProfileData() {
+    String? data = HomePage.cachedProfileData;
+    if (data != null) {
+      try {
+        final userMap = jsonDecode(data);
+        setState(() {
+          firstName = userMap['first_name'] ?? '';
+          lastName = userMap['last_name'] ?? '';
+        });
+      } catch (e) {
+        debugPrint("Error parsing profile data in SettingsPage: $e");
+      }
+    }
+  }
 
   void _toggleLanguage() {
     setState(() {
@@ -43,12 +68,17 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    String displayName =
+        (firstName.isNotEmpty || lastName.isNotEmpty)
+            ? '$firstName $lastName'.trim()
+            : widget.guardianName;
+
     return Scaffold(
       backgroundColor: const Color.fromRGBO(235, 235, 235, 1.0),
       appBar: CustomAppBar(
         children: [],
         showProfile: true,
-        guardianName: widget.guardianName,
+        guardianName: displayName,
         onChildSelected: (name) {},
       ),
       body: Column(
@@ -138,27 +168,42 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12.0,
+              vertical: 4.0,
+            ),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () async {
                   await FirebaseAuth.instance.signOut();
-                  Navigator.pushReplacementNamed(context, '/login');
+                  if (context.mounted) {
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/',
+                      (route) => false,
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                child: Text(
-                  'تسجيل خروج',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: const Color.fromRGBO(119, 2, 2, 1.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: const Center(
+                    child: Text(
+                      'تسجيل خروج',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color.fromRGBO(119, 2, 2, 1.0),
+                      ),
+                    ),
                   ),
                 ),
               ),

@@ -74,87 +74,105 @@ class ChildrenPage extends StatelessWidget {
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  child['name'] ?? '',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color.fromRGBO(16, 37, 66, 1.0),
+                            child: Directionality(
+                              textDirection: TextDirection.rtl,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    child['name'] ?? '',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color.fromRGBO(16, 37, 66, 1.0),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.school,
-                                      size: 16,
-                                      color: const Color.fromRGBO(
-                                        16,
-                                        37,
-                                        66,
-                                        1.0,
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.school,
+                                        size: 16,
+                                        color: const Color.fromRGBO(
+                                          16,
+                                          37,
+                                          66,
+                                          1.0,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      child['stage'] ?? '',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Color.fromRGBO(16, 37, 66, 1.0),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        child['stage'] ?? '',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Color.fromRGBO(
+                                            16,
+                                            37,
+                                            66,
+                                            1.0,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.class_,
-                                      size: 16,
-                                      color: const Color.fromRGBO(
-                                        16,
-                                        37,
-                                        66,
-                                        1.0,
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.class_,
+                                        size: 16,
+                                        color: const Color.fromRGBO(
+                                          16,
+                                          37,
+                                          66,
+                                          1.0,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      child['class'] ?? '',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Color.fromRGBO(16, 37, 66, 1.0),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        child['class'] ?? '',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Color.fromRGBO(
+                                            16,
+                                            37,
+                                            66,
+                                            1.0,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.location_on,
-                                      size: 16,
-                                      color: const Color.fromRGBO(
-                                        16,
-                                        37,
-                                        66,
-                                        1.0,
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.location_on,
+                                        size: 16,
+                                        color: const Color.fromRGBO(
+                                          16,
+                                          37,
+                                          66,
+                                          1.0,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      child['school'] ?? '',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Color.fromRGBO(16, 37, 66, 1.0),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        child['school'] ?? '',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Color.fromRGBO(
+                                            16,
+                                            37,
+                                            66,
+                                            1.0,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         );

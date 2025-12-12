@@ -11,14 +11,14 @@ import 'pages/reports_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Load environment variables
   await dotenv.load(fileName: ".env");
   await initializeDateFormatting('ar', null);
-  
+
   // Initialize Firebase
   FirebaseService.initialize();
-  
+
   runApp(const MyApp());
 }
 
