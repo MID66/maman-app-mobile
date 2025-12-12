@@ -1,16 +1,15 @@
-# studentexitsystem
+# Maman (مأمن) - Student Dismissal System
 
-A new Flutter project.
+A mobile application designed to streamline and secure the student dismissal process.
 
-## Getting Started
+## About The Project
 
-This project is a starting point for a Flutter application.
+This application allows guardians to safely and efficiently manage the pickup of students from school. It includes features for:
+- Secure Login via Phone OTP
+- Managing Children profiles
+- Viewing Reports
+- Settings and Profile management
 
-A few resources to get you started if this is your first Flutter project:
+## Absher Tuwaiq Hackathon
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+This project is a participation in the **Absher Tuwaiq Hackathon (هاكاثون أبشر طويق)**.
